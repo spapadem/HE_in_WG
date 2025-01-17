@@ -10,28 +10,35 @@ import ngsolve.internal as ngsint
 ngsint.viewoptions.drawoutline=0 # disable triangle outline when plotting.
 import netgen.gui
 import numpy as np
-from Gfu_to_mesh import ConvertSolutiononMesh
 
+# Function to convert the solution to a mesh.
+def ConvertSolutiononMesh(mesh,gfu):
+    soln = np.zeros(mesh.nv,dtype='complex')
+    i = 0
+    for p in mesh.ngmesh.Points():
+        soln[i] = gfu(p[0],p[1])
+        i = i + 1
+    return soln
 
 
 ## Problem setup.
 # Wavenumber & source.
-c0 = 1500. # Constant wave speed.
-f0 = 75.   # Reference frequency.
-lambda_0 = c0/f0; # Reference wavelength. We use this to define all sizes with respect to this scale.
+c0 = 1500.          # Constant wave speed.
+f0 = 48.            # Reference frequency.
+lambda_0 = c0/f0;   # Reference wavelength. We use this to define all sizes with respect to this scale.
 
 
 # Waveguide characteristics
-Dc = 7*lambda_0 # Waveguide constant depth
-Dm = 20*lambda_0 # Waveguide max depth
-Wc =  10*lambda_0 # Width with constant depth
-Wm = 35*lambda_0 # Waveguide max width. (originally infinite but we have to truncate for computational purposes).
-PML_size = 4*lambda_0 # Length of the Perfectly Matched Layer (PML) that helps us truncate our computational domain.
+Dc = 7*lambda_0         # Waveguide constant depth
+Dm = 20*lambda_0        # Waveguide max depth
+Wc =  10*lambda_0       # Width with constant depth
+Wm = 35*lambda_0        # Waveguide max width. (originally infinite but we have to truncate for computational purposes).
+PML_size = 4*lambda_0   # Length of the Perfectly Matched Layer (PML) that helps us truncate our computational domain.
 
 # Location and size of the scatterer.
-x_sc = 22*lambda_0 # Location in x-axis
-y_sc = 8.5*lambda_0 # Location in y-axis
-b = 3*lambda_0 # Size of the scatterer (radius)
+x_sc = 12*lambda_0  # Location in x-axis
+y_sc = 3.5*lambda_0 # Location in y-axis
+b = 1*lambda_0      # Size of the scatterer (radius)
 
 ## Source present in the waveguide.
 frq = 73.               # Frequency in which the source emits its pulse.
@@ -65,15 +72,15 @@ pulse = sqrt(alpha/pi)*exp(-alpha*((x-x_s)*(x-x_s) + (y-y_s)*(y-y_s))) # Source 
 geo = SplineGeometry()
 
 # Defining the points that will define the waveguide geometry.
-pnts =[(0,0), #1
-       (Wm,0), #2
-       (Wm,Dm),  #3
-       (Wm-4*lambda_0,Dm), #4
-       (Wm-7*lambda_0,Dm), #5
+pnts =[(0,0),                               #1
+       (Wm,0),                              #2
+       (Wm,Dm),                             #3
+       (Wm-4*lambda_0,Dm),                  #4
+       (Wm-7*lambda_0,Dm),                  #5
        (0.5*(Wc+Wm-5*lambda_0), (Dc+Dm)/2), #6
-       (Wc,Dc), #7
-       (Wc-2*lambda_0,Dc), #8
-       (0,Dc)] #9
+       (Wc,Dc),                             #7
+       (Wc-2*lambda_0,Dc),                  #8
+       (0,Dc)]                              #9
 
 # Appending the points to the geometry.
 p1,p2,p3,p4,p5,p6,p7,p8,p9 = [geo.AppendPoint(*pnt) for pnt in pnts]
@@ -91,9 +98,9 @@ curves = [[["line",p1,p2],"top"],
 [geo.Append(c,bc=bc) for c,bc in curves]
 
 # Adding the PMLs to the geometry.
-geo.AddRectangle((-PML_size,0),(0,Dc),leftdomain=2,bc="PMLL") # Add left PML rectangle.
-geo.AddRectangle((Wm,0),(Wm+PML_size,Dm),leftdomain=3,bc="PMLR") # Add right PML rectangle.
-geo.AddCircle((x_sc,y_sc),b,leftdomain=0,rightdomain=1,bc="scatterer") # Add scatterer in the domain.
+geo.AddRectangle((-PML_size,0),(0,Dc),leftdomain=2,bc="PMLL")           # Add left PML rectangle.
+geo.AddRectangle((Wm,0),(Wm+PML_size,Dm),leftdomain=3,bc="PMLR")        # Add right PML rectangle.
+geo.AddCircle((x_sc,y_sc),b,leftdomain=0,rightdomain=1,bc="scatterer")  # Add scatterer in the domain.
 geo.SetMaterial(2,"PMLL")
 geo.SetMaterial(3,"PMLR")
 
@@ -120,7 +127,7 @@ u, v = fes.TnT() # Creating Test and Trial functions u, v.
 
 Draw(pulse, mesh,'mesh') # Optional drawing to see what the source looks like.
 
-    # Creating the weak form of the Helmholtz equation -Du - k^2 u = f
+# Creating the weak form of the Helmholtz equation -Du - k^2 u = f
 a = BilinearForm(fes, symmetric=True) # Setting a as a bilinear form
 a += grad(u)*grad(v)*dx - k*k*u*v*dx
 a.Assemble()
@@ -129,10 +136,10 @@ f = LinearForm(fes) # RHS is a linear form that contains the source.
 f += pulse * v * dx
 f.Assemble()
 
-    # Create the grid function gfu that will contain our solution.
+# Create the grid function gfu that will contain our solution.
 gfu = GridFunction(fes, name="u")
 
-    # Solve the linear system.
+# Solve the linear system.
 gfu.vec.data = a.mat.Inverse() * f.vec
 
 # Draw the modulus of the complex solution on the mesh.
