@@ -20,7 +20,7 @@ python3 HE_in_WG_var_depth.py
 ```
 Running the code will generate the solution and plot it. It also saves two files inside the `data` folder:
 - `mesh_wg_var_depth.msh`: the mesh file.
-- `sol_wg_var_depth_f1.mat`: the solution file.
+- `sol_wg_var_depth_f73.0.mat`: the solution file.
 
 Both files can be used to visualize the solution outside of NGSolve.
 
