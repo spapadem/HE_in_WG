@@ -40,12 +40,20 @@ x_sc = 12*lambda_0  # Location in x-axis
 y_sc = 3.5*lambda_0 # Location in y-axis
 b = 1*lambda_0      # Size of the scatterer (radius)
 
-## Source present in the waveguide.
+# Boundary condition of the scatterer
+# Define: "D" for Dirichlet, "N" for Neumann, "P" for penetrable
+bc_scatterer = "P"
+
+# Material parameter of the scatterer
+if bc_scatterer.upper() == "P":
+    mat_param = 5
+
+# # Source present in the waveguide.
 frq = 73.               # Frequency in which the source emits its pulse.
 omega = 2.*np.pi*frq    # Angular frequency.
 k = omega/c0            # wavenumber
-x_s = 4*lambda_0        # Position of source in x-axis.
-y_s =  3*lambda_0       # Position of source in y-axis.
+x_s = 30.5*lambda_0     # Position of source in x-axis.
+y_s = 7.25*lambda_0     # Position of source in y-axis.
 r = 5                   # Radius of source
 alpha = log(10^6)/r**2  # Decay rate of the source
 pulse = sqrt(alpha/pi)*exp(-alpha*((x-x_s)*(x-x_s) + (y-y_s)*(y-y_s))) # Source pulse
@@ -100,9 +108,18 @@ curves = [[["line",p1,p2],"top"],
 # Adding the PMLs to the geometry.
 geo.AddRectangle((-PML_size,0),(0,Dc),leftdomain=2,bc="PMLL")           # Add left PML rectangle.
 geo.AddRectangle((Wm,0),(Wm+PML_size,Dm),leftdomain=3,bc="PMLR")        # Add right PML rectangle.
-geo.AddCircle((x_sc,y_sc),b,leftdomain=0,rightdomain=1,bc="scatterer")  # Add scatterer in the domain.
-geo.SetMaterial(2,"PMLL")
-geo.SetMaterial(3,"PMLR")
+
+geo.SetMaterial(1,"medium") # Medium
+geo.SetMaterial(2,"PMLL") # PML Left
+geo.SetMaterial(3,"PMLR") # PML Right
+
+if bc_scatterer.upper() == "D":
+    geo.AddCircle((x_sc,y_sc),b,leftdomain=0,rightdomain=1,bc="scatterer")  # Add scatterer in the domain.
+elif bc_scatterer.upper() == "N":
+    geo.AddCircle((x_sc,y_sc),b,leftdomain=0,rightdomain=1,bc="scatterer")  # Add scatterer in the domain.
+elif bc_scatterer.upper() == "P":
+    geo.AddCircle((x_sc,y_sc),b,leftdomain=4,rightdomain=1,bc="scatterer")  # Add scatterer in the domain.
+    geo.SetMaterial(4,"scatterer") # Scatterer
 
 # Generating the mesh.
 mesh = Mesh(geo.GenerateMesh(maxh=5))
@@ -119,16 +136,31 @@ mesh.SetPML(pml.Cartesian((0,0), (Wm,Dm), 2j),"PMLL|PMLR")
 
 ## Creating the finite element space based on the mesh we just created.
 ## We define the order of the finite elements, and boundary conditions (leave blank for Neummann b.c.'s)
-fes = H1(mesh, order=2, complex=True, dirichlet='top|bottom|scatterer') 
+if bc_scatterer.upper() == "D":
+    fes = H1(mesh, order=2, complex=True, dirichlet='top|bottom|scatterer') 
+elif bc_scatterer.upper() == "N":
+    fes = H1(mesh, order=2, complex=True, dirichlet='top|bottom')
+elif bc_scatterer.upper() == "P":
+    fes = H1(mesh, order=2, complex=True, dirichlet='top|bottom')
 
 u, v = fes.TnT() # Creating Test and Trial functions u, v.
 
 Draw(pulse, mesh,'mesh') # Optional drawing to see what the source looks like.
 
 # Creating the weak form of the Helmholtz equation -Du - k^2 u = f
-a = BilinearForm(fes, symmetric=True) # Setting a as a bilinear form
-a += grad(u)*grad(v)*dx - k*k*u*v*dx
-a.Assemble()
+if bc_scatterer.upper() == "D":
+    a = BilinearForm(fes, symmetric=True) # Setting a as a bilinear form
+    a += grad(u)*grad(v)*dx - k*k*u*v*dx
+    a.Assemble()
+elif bc_scatterer.upper() == "N":
+    a = BilinearForm(fes, symmetric=True) # Setting a as a bilinear form
+    a += grad(u)*grad(v)*dx - k*k*u*v*dx
+    a.Assemble()
+elif bc_scatterer.upper() == "P":
+    a = BilinearForm(fes, symmetric=True) # Setting a as a bilinear form
+    a += grad(u)*grad(v)*dx('medium|PMLL|PMLR') - k*k*u*v*dx('medium|PMLL|PMLR')
+    a += 1/mat_param*grad(u)*grad(v)*dx('scatterer') - k*k*u*v*dx('scatterer')
+    a.Assemble()
 
 f = LinearForm(fes) # RHS is a linear form that contains the source.
 f += pulse * v * dx
