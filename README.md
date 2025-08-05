@@ -1,7 +1,24 @@
 # A Python code for solving the Helmholtz equation in a two-dimensional waveguide.
 
 We use NGSolve (https://ngsolve.org/) to solve the Helmholtz equation in a two-dimensional waveguide.  In the provided example, we solve the Helmholtz equation in a waveguide with a variable depth, and specifically a waveguide of increasing depth. A single circular scatterer is placed in the waveguide.
+
 ## Installation
+
+### Required Packages
+
+The following packages are required to run this code:
+- `numpy` - Numerical computing library
+- `scipy` - Scientific computing library  
+- `meshio` - I/O for various mesh formats
+
+Install the required packages:
+
+```bash
+pip install numpy scipy meshio
+```
+
+### NGSolve Installation
+
 To install NGSolve, run the following command:
 ```bash
 pip install --upgrade ngsolve
