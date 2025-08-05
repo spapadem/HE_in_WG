@@ -9,7 +9,6 @@ import meshio
 import ngsolve.internal as ngsint
 ngsint.viewoptions.drawoutline=0 # disable triangle outline when plotting.
 import netgen.gui
-import numpy as np
 
 # Function to convert the solution to a mesh.
 def ConvertSolutiononMesh(mesh,gfu):
